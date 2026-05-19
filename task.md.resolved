@@ -1,0 +1,20 @@
+# AI Trip Planner Tasks
+
+## Phase 1: Foundation & Core Application
+
+- [/] **Project Initialization**
+  - [ ] Initialize Python Backend (FastAPI)
+  - [ ] Initialize React Frontend (Vite)
+- [ ] **Backend Setup**
+  - [ ] Setup FastAPI with CORS
+  - [ ] Configure MongoDB connection using Motor
+  - [ ] Setup Gemini API Client
+  - [ ] Create API route for generating itineraries
+- [ ] **Frontend Setup**
+  - [ ] Implement Premium CSS Design System (colors, fonts, glassmorphism)
+  - [ ] Setup React Router
+  - [ ] Build `Home Page` with Search Form
+  - [ ] Build `Search Results / Itinerary Page`
+  - [ ] Connect Frontend to Backend API
+- [ ] **Integration & Testing**
+  - [ ] Test End-to-End Itinerary Generation

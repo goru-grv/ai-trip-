@@ -1,0 +1,25 @@
+# AI Trip Planner - Phase 2 (3D UI Overhaul) Complete
+
+I have completely upgraded the frontend to match your request for a **premium 3D UI** and added the missing core pages. 
+
+## What Was Added
+
+### 1. 3D Glassmorphism Design System
+- Added `react-parallax-tilt` to introduce depth and perspective to the UI. 
+- All major panels (Forms, Itinerary Days, Hotel Cards) now feature a subtle, smooth 3D tilt effect that responds to your mouse movement.
+- Added `transform: translateZ` properties to elements inside the glass panels so text and icons visually "pop out" from their backgrounds, creating a true 3D layer effect.
+- An animated gradient text effect was added to the main titles.
+
+### 2. New Pages
+- **Navbar:** A persistent top navigation bar that blur-filters over the background, allowing easy switching between the Home, Saved Trips, and Auth pages.
+- **Login / Register (`/auth`):** A beautifully animated 3D auth card. You can toggle between Login and Register, and the form smoothly expands/collapses using `framer-motion`.
+- **Saved Trips (`/saved`):** A dedicated dashboard showcasing past trips in stunning 3D image cards. Currently populated with high-quality mock data (Paris, Japan, New York) to demonstrate the layout.
+
+### 3. Upgraded Existing Pages
+- **Home (`/`):** The main search form is now a massive interactive 3D glass panel. 
+- **Results (`/results`):** Every day in the generated itinerary, as well as the hotel recommendations, are now individual floating 3D panels that react when hovered over.
+
+## How to Test
+The frontend server is still running. Just head over to `http://localhost:5173/` and move your mouse around the cards to feel the 3D perspective! You can navigate between the pages using the new Navbar at the top.
+
+Let me know what you think of the new aesthetics! Next, we could hook up the Login and Saved Trips to the MongoDB backend, or build the AI Chatbot!
