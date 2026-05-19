@@ -47,7 +47,7 @@ const Airplane = () => {
         {trailDots.map((dot, i) => (
           <mesh key={i} position={dot.pos}>
             <sphereGeometry args={[0.0035, 4, 4]} />
-            <meshBasicMaterial color="#961e1eff" transparent opacity={dot.opacity} />
+            <meshBasicMaterial color="#efe9e9ff" transparent opacity={dot.opacity} />
           </mesh>
         ))}
 
