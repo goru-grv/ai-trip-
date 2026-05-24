@@ -2,9 +2,9 @@ import React, { useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-const Checkout = ({ tripData, cartItems = [], removeFromCart, clearCart }) => {
+const Checkout = ({ user, tripData, cartItems = [], removeFromCart, clearCart }) => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(user?.email || '');
   const [paymentMethod, setPaymentMethod] = useState('UPI');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -36,7 +36,8 @@ const Checkout = ({ tripData, cartItems = [], removeFromCart, clearCart }) => {
         user_email: email,
         destination: tripData?.destination || 'Unknown Destination',
         payment_method: paymentMethod,
-        cart_items: cartItems
+        cart_items: cartItems,
+        trip_data: tripData
       });
       setResult(response.data);
       clearCart();

@@ -59,6 +59,7 @@ function App() {
             <ProtectedRoute user={user}>
               <Results
                 tripData={tripData}
+                setTripData={setTripData}
                 cartItems={cartItems}
                 addToCart={addToCart}
                 removeFromCart={removeFromCart}
@@ -73,6 +74,7 @@ function App() {
           element={
             <ProtectedRoute user={user}>
               <Checkout
+                user={user}
                 tripData={tripData}
                 cartItems={cartItems}
                 removeFromCart={removeFromCart}
@@ -83,7 +85,7 @@ function App() {
         />
         
         {/* Protected Saved Trips */}
-        <Route path="/saved" element={<ProtectedRoute user={user}><SavedTrips /></ProtectedRoute>} />
+        <Route path="/saved" element={<ProtectedRoute user={user}><SavedTrips user={user} setTripData={setTripData} /></ProtectedRoute>} />
         
         {/* Authentication Page (Login/Sign In) */}
         <Route path="/auth" element={<PublicRoute user={user}><Auth setUser={setUser} /></PublicRoute>} />

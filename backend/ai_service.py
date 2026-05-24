@@ -25,18 +25,26 @@ async def generate_itinerary(
     interests: str,
     origin_city: str = "None",
     start_date: str = None,
+    daily_plans: list = None,
 ):
     """
     Calls the Gemini API to generate a structured JSON itinerary.
     """
     
+    daily_plans_prompt = ""
+    if daily_plans:
+        daily_plans_prompt = "\nThe user has requested the following plans/focus for each day. You MUST design the activities for each corresponding day to include these plans/focus:\n"
+        for i, plan in enumerate(daily_plans):
+            if plan and plan.strip():
+                daily_plans_prompt += f"- Day {i+1}: {plan.strip()}\n"
+
     prompt = f"""
     You are an expert AI Travel Planner. Create a detailed {days}-day itinerary for a trip to {destination}.
     The user's budget is {budget}.
     The travel type is {travel_type}.
     Their interests include: {interests}.
     Your role is a practical travel agent who helps users book transport and hotels with realistic choices.
-    
+    {daily_plans_prompt}
     Please provide the output strictly as a JSON object matching the following structure without any markdown blocks or backticks:
     {{
       "trip_title": "A catchy title for the trip",
@@ -110,7 +118,7 @@ async def generate_itinerary(
     
     if not API_KEY:
         # Return mock data if no Gemini API key is provided
-        base_data = get_mock_itinerary(destination, days, budget)
+        base_data = get_mock_itinerary(destination, days, budget, daily_plans)
         live_data = get_live_travel_data(destination=destination, days=days, origin=origin_city, departure_date=start_date)
         return merge_live_data(base_data, live_data)
         
@@ -130,7 +138,7 @@ async def generate_itinerary(
     except Exception as e:
         print(f"Error calling Gemini: {e}")
         # Fallback to mock data on error for robustness during dev
-        base_data = get_mock_itinerary(destination, days, budget)
+        base_data = get_mock_itinerary(destination, days, budget, daily_plans)
         live_data = get_live_travel_data(destination=destination, days=days, origin=origin_city, departure_date=start_date)
         return merge_live_data(base_data, live_data)
 
@@ -150,28 +158,41 @@ def merge_live_data(base_data, live_data):
     base_data["live_data_notes"] = live_data.get("live_data_notes", [])
     return base_data
 
-def get_mock_itinerary(destination, days, budget):
+def get_mock_itinerary(destination, days, budget, daily_plans=None):
     """Fallback mock data for development without API key"""
+    itinerary = []
+    for d in range(1, days + 1):
+        plan_text = ""
+        if daily_plans and len(daily_plans) >= d and daily_plans[d-1]:
+            plan_text = f" User requested: {daily_plans[d-1]}."
+        
+        theme = f"Explore {destination} - Day {d}" if not plan_text else f"Focus on {daily_plans[d-1]}"
+        itinerary.append({
+          "day": d,
+          "theme": theme,
+          "activities": [
+            {
+              "time": "09:00 AM",
+              "title": f"Visit attractions in {destination}",
+              "description": f"Enjoy your day in {destination}.{plan_text}",
+              "estimated_cost": "₹1500"
+            },
+            {
+              "time": "03:00 PM",
+              "title": "Local sightseeing & dining",
+              "description": f"Discover scenic view spots and local cuisines in {destination}.",
+              "estimated_cost": "₹800"
+            }
+          ]
+        })
+        
     return {
       "trip_title": f"Mock Trip to {destination}",
       "destination": destination,
       "duration": days,
       "budget": budget,
-      "summary": "This is a mock itinerary generated because the Gemini API key was missing or an error occurred.",
-      "itinerary": [
-        {
-          "day": 1,
-          "theme": "Arrival and Exploration",
-          "activities": [
-            {
-              "time": "10:00 AM",
-              "title": "Explore City Center",
-              "description": f"Walk around the main attractions of {destination}.",
-              "estimated_cost": "₹1500"
-            }
-          ]
-        }
-      ],
+      "summary": "This is a mock itinerary customized with your daily preferences.",
+      "itinerary": itinerary,
       "hotel_suggestions": [
         {
           "name": f"Grand {destination} Hotel",

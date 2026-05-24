@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from uuid import uuid4
 from datetime import datetime
 import re
+from database import db
 
 load_dotenv()
 
@@ -22,6 +23,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.on_event("startup")
+async def startup_db_client():
+    try:
+        # Verify MongoDB connection on startup
+        await db.command("ping")
+        print("Connected to MongoDB successfully!")
+    except Exception as e:
+        print(f"MongoDB connection failed: {e}")
+
 class TripRequest(BaseModel):
     budget: str
     destination: str
@@ -30,6 +40,7 @@ class TripRequest(BaseModel):
     interests: str
     origin_city: Optional[str] = "New Delhi"
     start_date: Optional[str] = None
+    daily_plans: Optional[List[str]] = None
 
 
 class BookingItem(BaseModel):
@@ -44,6 +55,7 @@ class CheckoutRequest(BaseModel):
     destination: str
     payment_method: str
     cart_items: List[BookingItem]
+    trip_data: Optional[dict] = None
 
 @app.get("/")
 def read_root():
@@ -60,7 +72,8 @@ async def create_trip(request: TripRequest):
             travel_type=request.travel_type,
             interests=request.interests,
             origin_city=request.origin_city or "New Delhi",
-            start_date=request.start_date
+            start_date=request.start_date,
+            daily_plans=request.daily_plans
         )
         return {"status": "success", "data": itinerary}
     except Exception as e:
@@ -96,6 +109,20 @@ async def checkout_booking(request: CheckoutRequest):
                 }
             )
 
+        # Save booking details to MongoDB
+        booking_data = {
+            "booking_reference": booking_reference,
+            "user_email": request.user_email,
+            "destination": request.destination,
+            "payment_method": request.payment_method,
+            "paid_amount_inr": total_amount,
+            "currency": "INR",
+            "booked_at": datetime.utcnow().isoformat() + "Z",
+            "tickets": tickets,
+            "trip_data": request.trip_data
+        }
+        await db.bookings.insert_one(booking_data)
+
         return {
             "status": "success",
             "message": "Payment successful. All selected tickets booked by agent.",
@@ -109,3 +136,17 @@ async def checkout_booking(request: CheckoutRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/bookings")
+async def get_user_bookings(email: str):
+    try:
+        cursor = db.bookings.find({"user_email": email})
+        bookings = []
+        async for booking in cursor:
+            booking["_id"] = str(booking["_id"])
+            bookings.append(booking)
+        return {"status": "success", "data": bookings}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
