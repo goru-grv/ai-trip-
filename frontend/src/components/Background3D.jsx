@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useRef, useState } from 'react';
+import React, { Component, Suspense, useEffect, useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useTexture, Cloud, Stars } from '@react-three/drei';
 import { SRGBColorSpace } from 'three';
@@ -173,37 +173,91 @@ const Earth = () => {
   );
 };
 
+class CanvasErrorBoundary extends Component {
+  state = { hasError: false };
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.warn("3D Background failed to load, falling back to CSS space gradient:", error);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          zIndex: -1,
+          background: 'radial-gradient(circle at 50% 50%, #0d091a, #040209)',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
+            background: 'radial-gradient(circle at 20% 30%, rgba(217, 70, 239, 0.08), transparent 50%), radial-gradient(circle at 80% 70%, rgba(0, 240, 255, 0.06), transparent 50%)',
+            pointerEvents: 'none'
+          }} />
+          <div style={{
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
+            opacity: 0.35,
+            background: 'radial-gradient(1px 1px at 25px 35px, #fff, transparent), radial-gradient(1px 1px at 50px 100px, #fff, transparent), radial-gradient(2px 2px at 125px 75px, #fff, transparent), radial-gradient(1.5px 1.5px at 200px 180px, #fff, transparent)',
+            backgroundSize: '250px 250px',
+            animation: 'twinkle 15s linear infinite',
+            pointerEvents: 'none'
+          }} />
+          <style>{`
+            @keyframes twinkle {
+              0% { opacity: 0.3; transform: scale(1); }
+              50% { opacity: 0.5; transform: scale(1.05); }
+              100% { opacity: 0.3; transform: scale(1); }
+            }
+          `}</style>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const Background3D = () => {
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        zIndex: -1,
-        backgroundColor: '#040209', // Fallback for cosmic space black
-      }}
-    >
-      <Canvas camera={{ position: [0, 0, 13.5], fov: 48 }}>
-        {/* Twinkling Stars in Deep Space */}
-        <Stars radius={100} depth={50} count={4000} factor={6} saturation={0.5} fade speed={2} />
+    <CanvasErrorBoundary>
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          zIndex: -1,
+          backgroundColor: '#040209', // Fallback for cosmic space black
+        }}
+      >
+        <Canvas camera={{ position: [0, 0, 13.5], fov: 48 }}>
+          {/* Twinkling Stars in Deep Space */}
+          <Stars radius={100} depth={50} count={4000} factor={6} saturation={0.5} fade speed={2} />
 
-        {/* Glowing Space-Dust Nebula Clouds */}
-        <Cloud position={[-10, 5, -20]} speed={0.4} opacity={0.3} scale={3} color="#a78bfa" />
-        <Cloud position={[10, -5, -25]} speed={0.3} opacity={0.2} scale={3.5} color="#d946ef" />
-        <Cloud position={[0, 8, -22]} speed={0.3} opacity={0.25} scale={2.5} color="#6366f1" />
+          {/* Glowing Space-Dust Nebula Clouds */}
+          <Cloud position={[-10, 5, -20]} speed={0.4} opacity={0.3} scale={3} color="#a78bfa" />
+          <Cloud position={[10, -5, -25]} speed={0.3} opacity={0.2} scale={3.5} color="#d946ef" />
+          <Cloud position={[0, 8, -22]} speed={0.3} opacity={0.25} scale={2.5} color="#6366f1" />
 
-        <hemisphereLight color="#c084fc" groundColor="#040209" intensity={2.2} />
-        <ambientLight intensity={1.8} />
-        <directionalLight position={[8, 6, 8]} intensity={4.0} color="#ffffff" />
-        <directionalLight position={[-6, -2, -6]} intensity={3.5} color="#d946ef" />
-        <Suspense fallback={null}>
-          <Earth />
-        </Suspense>
-      </Canvas>
-    </div>
+          <hemisphereLight color="#c084fc" groundColor="#040209" intensity={2.2} />
+          <ambientLight intensity={1.8} />
+          <directionalLight position={[8, 6, 8]} intensity={4.0} color="#ffffff" />
+          <directionalLight position={[-6, -2, -6]} intensity={3.5} color="#d946ef" />
+          <Suspense fallback={null}>
+            <Earth />
+          </Suspense>
+        </Canvas>
+      </div>
+    </CanvasErrorBoundary>
   );
 };
 

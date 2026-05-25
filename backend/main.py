@@ -40,7 +40,6 @@ class TripRequest(BaseModel):
     interests: str
     origin_city: Optional[str] = "New Delhi"
     start_date: Optional[str] = None
-    daily_plans: Optional[List[str]] = None
 
 
 class BookingItem(BaseModel):
@@ -72,8 +71,7 @@ async def create_trip(request: TripRequest):
             travel_type=request.travel_type,
             interests=request.interests,
             origin_city=request.origin_city or "New Delhi",
-            start_date=request.start_date,
-            daily_plans=request.daily_plans
+            start_date=request.start_date
         )
         return {"status": "success", "data": itinerary}
     except Exception as e:

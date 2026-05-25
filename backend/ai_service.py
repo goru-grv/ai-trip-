@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 import json
 import google.generativeai as genai
-from travel_live_service import get_live_travel_data
+from travel_live_service import get_live_travel_data, attach_day_wise_hotels
 
 load_dotenv()
 
@@ -14,7 +14,7 @@ else:
     print("WARNING: GEMINI_API_KEY not found in environment variables.")
 
 # Use the latest model name
-MODEL_NAME = 'gemini-1.5-flash-latest'
+MODEL_NAME = 'gemini-2.5-flash'
 
 
 async def generate_itinerary(
@@ -25,26 +25,17 @@ async def generate_itinerary(
     interests: str,
     origin_city: str = "None",
     start_date: str = None,
-    daily_plans: list = None,
 ):
     """
     Calls the Gemini API to generate a structured JSON itinerary.
     """
     
-    daily_plans_prompt = ""
-    if daily_plans:
-        daily_plans_prompt = "\nThe user has requested the following plans/focus for each day. You MUST design the activities for each corresponding day to include these plans/focus:\n"
-        for i, plan in enumerate(daily_plans):
-            if plan and plan.strip():
-                daily_plans_prompt += f"- Day {i+1}: {plan.strip()}\n"
-
     prompt = f"""
     You are an expert AI Travel Planner. Create a detailed {days}-day itinerary for a trip to {destination}.
     The user's budget is {budget}.
     The travel type is {travel_type}.
     Their interests include: {interests}.
     Your role is a practical travel agent who helps users book transport and hotels with realistic choices.
-    {daily_plans_prompt}
     Please provide the output strictly as a JSON object matching the following structure without any markdown blocks or backticks:
     {{
       "trip_title": "A catchy title for the trip",
@@ -56,12 +47,62 @@ async def generate_itinerary(
         {{
           "day": 1,
           "theme": "Theme for the day",
-          "activities": [
+          "optimized_route_summary": "Description of route layout for the day to avoid backtracking, indicating direction and connections.",
+          "weather_prep": "Weather advice for this day's destinations (e.g. carry umbrella, wear walking shoes).",
+          "safety_tips": "Local safety warnings or tips for this specific day's areas.",
+          "budget_tips": "How to save money during this day's activities/transit.",
+          "time_slots": [
             {{
-              "time": "09:00 AM",
-              "title": "Activity Name",
-              "description": "Details about the activity.",
-              "estimated_cost": "Estimated cost strictly in INR (₹)"
+              "slot": "Morning",
+              "place_name": "Specific morning place/attraction name",
+              "why_it_matters": "Historical, cultural significance or why the place is interesting",
+              "activity": "Detailed activity/thing to do at the place",
+              "travel_time_from_previous": "Estimated transit duration (e.g., 20 mins) and direction from the previous location/hotel",
+              "transport_suggestion": "Practical local transit mode (e.g., Metro Line X, Uber, Local Bus 123)",
+              "map_link": "Google Maps search link, e.g., https://www.google.com/maps/search/?api=1&query=Place+Name+Destination",
+              "photo_point": "Highly descriptive point for taking the best photo (e.g., Eastern gate during sunrise)",
+              "best_visiting_time": "Exact recommended timing (e.g., 8:00 AM - 10:00 AM)",
+              "food_spot": "Highly recommended food joint/stall/cafe nearby",
+              "local_dishes": "Specific traditional dishes/items to try at this food spot"
+            }},
+            {{
+              "slot": "Afternoon",
+              "place_name": "Specific afternoon place/attraction name",
+              "why_it_matters": "Historical, cultural significance or why the place is interesting",
+              "activity": "Detailed activity/thing to do at the place",
+              "travel_time_from_previous": "Estimated transit duration (e.g., 20 mins) and direction from the morning location",
+              "transport_suggestion": "Practical local transit mode",
+              "map_link": "Google Maps search link",
+              "photo_point": "Point for taking the best photo",
+              "best_visiting_time": "Exact recommended timing",
+              "food_spot": "Highly recommended food joint/stall/cafe nearby",
+              "local_dishes": "Specific traditional dishes/items to try"
+            }},
+            {{
+              "slot": "Evening",
+              "place_name": "Specific evening place/attraction name",
+              "why_it_matters": "Historical, cultural significance or why the place is interesting",
+              "activity": "Detailed activity/thing to do at the place",
+              "travel_time_from_previous": "Estimated transit duration and direction from the afternoon location",
+              "transport_suggestion": "Practical local transit mode",
+              "map_link": "Google Maps search link",
+              "photo_point": "Point for taking the best photo",
+              "best_visiting_time": "Exact recommended timing",
+              "food_spot": "Highly recommended food joint/stall/cafe nearby",
+              "local_dishes": "Specific traditional dishes/items to try"
+            }},
+            {{
+              "slot": "Night",
+              "place_name": "Specific night place/attraction name",
+              "why_it_matters": "Historical, cultural significance or why the place is interesting",
+              "activity": "Detailed activity/thing to do at the place",
+              "travel_time_from_previous": "Estimated transit duration and direction from the evening location",
+              "transport_suggestion": "Practical local transit mode",
+              "map_link": "Google Maps search link",
+              "photo_point": "Point for taking the best photo",
+              "best_visiting_time": "Exact recommended timing",
+              "food_spot": "Highly recommended food joint/stall/cafe nearby",
+              "local_dishes": "Specific traditional dishes/items to try"
             }}
           ]
         }}
@@ -118,7 +159,7 @@ async def generate_itinerary(
     
     if not API_KEY:
         # Return mock data if no Gemini API key is provided
-        base_data = get_mock_itinerary(destination, days, budget, daily_plans)
+        base_data = get_mock_itinerary(destination, days, budget)
         live_data = get_live_travel_data(destination=destination, days=days, origin=origin_city, departure_date=start_date)
         return merge_live_data(base_data, live_data)
         
@@ -138,7 +179,7 @@ async def generate_itinerary(
     except Exception as e:
         print(f"Error calling Gemini: {e}")
         # Fallback to mock data on error for robustness during dev
-        base_data = get_mock_itinerary(destination, days, budget, daily_plans)
+        base_data = get_mock_itinerary(destination, days, budget)
         live_data = get_live_travel_data(destination=destination, days=days, origin=origin_city, departure_date=start_date)
         return merge_live_data(base_data, live_data)
 
@@ -147,8 +188,12 @@ def merge_live_data(base_data, live_data):
     if not isinstance(base_data, dict):
         base_data = {}
 
-    if live_data.get("hotel_suggestions"):
-        base_data["hotel_suggestions"] = live_data["hotel_suggestions"]
+    destination = base_data.get("destination", "Jaipur")
+    budget = base_data.get("budget", "Medium")
+
+    itinerary = base_data.get("itinerary", [])
+    if itinerary:
+        base_data["itinerary"] = attach_day_wise_hotels(itinerary, destination, budget)
 
     current_transport = base_data.get("transport_options", [])
     live_transport = live_data.get("transport_options", [])
@@ -158,30 +203,70 @@ def merge_live_data(base_data, live_data):
     base_data["live_data_notes"] = live_data.get("live_data_notes", [])
     return base_data
 
-def get_mock_itinerary(destination, days, budget, daily_plans=None):
+def get_mock_itinerary(destination, days, budget):
     """Fallback mock data for development without API key"""
     itinerary = []
     for d in range(1, days + 1):
-        plan_text = ""
-        if daily_plans and len(daily_plans) >= d and daily_plans[d-1]:
-            plan_text = f" User requested: {daily_plans[d-1]}."
-        
-        theme = f"Explore {destination} - Day {d}" if not plan_text else f"Focus on {daily_plans[d-1]}"
+        theme = f"Explore {destination} - Day {d}"
         itinerary.append({
           "day": d,
           "theme": theme,
-          "activities": [
+          "optimized_route_summary": f"Morning city tour heading south to local markets, concluding with an evening lakeside walk to avoid backtracking.",
+          "weather_prep": "Wear lightweight, breathable clothing, apply sunscreen, and carry a water bottle.",
+          "safety_tips": "Keep your personal items secure in crowded market areas and use official pre-paid transport.",
+          "budget_tips": "Purchase a day pass for public transit to save on individual fare costs.",
+          "time_slots": [
             {
-              "time": "09:00 AM",
-              "title": f"Visit attractions in {destination}",
-              "description": f"Enjoy your day in {destination}.{plan_text}",
-              "estimated_cost": "₹1500"
+              "slot": "Morning",
+              "place_name": f"Historic {destination} Center",
+              "why_it_matters": "The cultural epicenter featuring ancient architecture and rich community history.",
+              "activity": "Explore architectural wonders, taking in the historical significance and cultural artifacts.",
+              "travel_time_from_previous": "Departing from hotel: 15 mins via subway",
+              "transport_suggestion": "Subway Line A or official taxi",
+              "map_link": f"https://www.google.com/maps/search/?api=1&query={destination}+Historic+Center",
+              "photo_point": "Near the central pavilion at sunrise for the best warm lighting.",
+              "best_visiting_time": "08:30 AM - 11:00 AM",
+              "food_spot": "Central Heritage Tea House",
+              "local_dishes": "Signature Spice Tea, Steamed Dumplings"
             },
             {
-              "time": "03:00 PM",
-              "title": "Local sightseeing & dining",
-              "description": f"Discover scenic view spots and local cuisines in {destination}.",
-              "estimated_cost": "₹800"
+              "slot": "Afternoon",
+              "place_name": f"Grand {destination} Bazaar",
+              "why_it_matters": "A vibrant marketplace functioning as the local commerce and culinary hub.",
+              "activity": "Walk through colorful stalls, purchase authentic souvenirs, and interact with local weavers.",
+              "travel_time_from_previous": "10 mins walk from Historic Center",
+              "transport_suggestion": "Walking route along central boulevard",
+              "map_link": f"https://www.google.com/maps/search/?api=1&query={destination}+Grand+Bazaar",
+              "photo_point": "Second-floor balcony overlooking the bazaar corridors for a wide busy scene.",
+              "best_visiting_time": "12:30 PM - 03:00 PM",
+              "food_spot": "Bazaar Spices Kitchen",
+              "local_dishes": "Traditional Regional Thali, Local Street Chaat"
+            },
+            {
+              "slot": "Evening",
+              "place_name": f"{destination} Scenic Lakefront",
+              "why_it_matters": "A peaceful natural retreat where locals gather to relax during sunset.",
+              "activity": "Take a scenic boat tour on the lake, enjoying the cool evening breeze and city skyline.",
+              "travel_time_from_previous": "20 mins auto-rickshaw from Bazaar",
+              "transport_suggestion": "Auto-rickshaw or local bus",
+              "map_link": f"https://www.google.com/maps/search/?api=1&query={destination}+Lakefront",
+              "photo_point": "Lakeside dock during sunset to capture reflection of the orange sky on water.",
+              "best_visiting_time": "05:00 PM - 07:00 PM",
+              "food_spot": "Lakeside Sunset Bistro",
+              "local_dishes": "Grilled Fish, Lemon Soda"
+            },
+            {
+              "slot": "Night",
+              "place_name": f"{destination} Night Market",
+              "why_it_matters": "Famous for its energetic street food atmosphere and glowing neon stalls.",
+              "activity": "Indulge in night snacks, enjoy street music performances, and sample desserts.",
+              "travel_time_from_previous": "10 mins walk from Lakefront",
+              "transport_suggestion": "Walking via lakeside path",
+              "map_link": f"https://www.google.com/maps/search/?api=1&query={destination}+Night+Market",
+              "photo_point": "Under the main glowing neon archway at the market entrance.",
+              "best_visiting_time": "08:30 PM - 10:30 PM",
+              "food_spot": "Heritage Sweets & Snacks",
+              "local_dishes": "Signature Sweet Specialty, Grilled Street Skewers"
             }
           ]
         })
@@ -193,15 +278,7 @@ def get_mock_itinerary(destination, days, budget, daily_plans=None):
       "budget": budget,
       "summary": "This is a mock itinerary customized with your daily preferences.",
       "itinerary": itinerary,
-      "hotel_suggestions": [
-        {
-          "name": f"Grand {destination} Hotel",
-          "rating": "4.0",
-          "price_per_night": "₹8000",
-          "description": "A nice place to stay.",
-          "booking_tip": "Book 3-4 weeks early for the best rates in central districts."
-        }
-      ],
+
       "transport_options": [
         {
           "mode": "Flight",

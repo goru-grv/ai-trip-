@@ -41,7 +41,7 @@ const Home = ({ setTripData }) => {
     travel_type: '',
     interests: ''
   });
-  const [dailyPlans, setDailyPlans] = useState([]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [stageIndex, setStageIndex] = useState(0);
@@ -58,25 +58,7 @@ const Home = ({ setTripData }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    if (name === 'number_of_days') {
-      const daysVal = parseInt(value, 10) || 0;
-      setFormData({ ...formData, [name]: value });
-      
-      const count = Math.min(Math.max(daysVal, 0), 30);
-      setDailyPlans((prev) => {
-        const newPlans = [...prev];
-        if (count > prev.length) {
-          for (let i = prev.length; i < count; i++) {
-            newPlans.push('');
-          }
-        } else if (count < prev.length) {
-          newPlans.splice(count);
-        }
-        return newPlans;
-      });
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleSubmit = async (e) => {
@@ -85,19 +67,12 @@ const Home = ({ setTripData }) => {
     setError(null);
     try {
       const parsedDays = parseInt(formData.number_of_days, 10);
-      const cleanedDailyPlans = dailyPlans.slice(0, parsedDays);
-      while (cleanedDailyPlans.length < parsedDays) {
-        cleanedDailyPlans.push('');
-      }
-
       const response = await axios.post('http://localhost:8000/api/generate-trip', {
         ...formData,
-        number_of_days: parsedDays,
-        daily_plans: cleanedDailyPlans
+        number_of_days: parsedDays
       });
       
       const tripDataResult = response.data.data;
-      tripDataResult.daily_plans = cleanedDailyPlans;
       tripDataResult.searchParams = { ...formData, number_of_days: parsedDays };
       
       setTripData(tripDataResult);
@@ -311,47 +286,7 @@ const Home = ({ setTripData }) => {
                   </div>
                 </div>
 
-                {parseInt(formData.number_of_days, 10) > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3 }}
-                    style={{ marginTop: '2rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '1.5rem', textAlign: 'left' }}
-                  >
-                    <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
-                      <Sparkles size={16} color="var(--accent-secondary)" /> Customize Your Daily Plans (Optional)
-                    </h3>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.2rem' }}>
-                      Specify key attractions, activities, or a vibe for each day. Leave blank to let the AI fully plan.
-                    </p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                      {dailyPlans.map((plan, index) => (
-                        <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Day {index + 1} Plan</label>
-                          <input
-                            type="text"
-                            className="glass-input"
-                            style={{ width: '100%' }}
-                            placeholder={
-                              index === 0 
-                                ? "e.g., Jagdish Mandir, Fatehsagar Lake boat ride" 
-                                : index === 1 
-                                  ? "e.g., City Palace, Lake Pichola, shopping" 
-                                  : "e.g., Local market exploration and departure"
-                            }
-                            value={plan}
-                            onChange={(e) => {
-                              const newPlans = [...dailyPlans];
-                              newPlans[index] = e.target.value;
-                              setDailyPlans(newPlans);
-                            }}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
+
 
                 {error && <p className="form-error">{error}</p>}
                 <button type="submit" className="glass-button planner-submit" disabled={loading}>

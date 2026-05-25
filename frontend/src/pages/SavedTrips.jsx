@@ -59,20 +59,44 @@ const SavedTrips = ({ user, setTripData }) => {
       navigate('/results');
     } else {
       // If trip_data is missing, construct a minimal version to avoid errors
+      const bookedHotels = booking.tickets.filter(t => t.item_type === 'hotel').map((t, idx) => ({
+        name: t.name.split('(')[0].trim(),
+        rating: 'N/A',
+        price_per_night: 'Booked',
+        reviews: 'Booked Stay',
+        why_recommended: 'This stay was selected and booked for your journey.',
+        address: t.details || 'Booked Address',
+        contact_number: 'N/A',
+        photo: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+        amenities: ['Booked'],
+        book_link: '#'
+      }));
+
+      const itinerary = Array.from({ length: booking.trip_data?.duration || 3 }, (_, idx) => ({
+        day: idx + 1,
+        theme: `Day ${idx + 1} Activity`,
+        time_slots: [
+          {
+            slot: 'Morning',
+            place_name: 'Booked Attraction',
+            activity: 'Enjoy your planned activities.',
+            travel_time_from_previous: 'N/A',
+            transport_suggestion: 'Local transit'
+          }
+        ],
+        suggested_hotel: bookedHotels[idx] || bookedHotels[0] || null,
+        alternative_hotels: []
+      }));
+
       const fallbackTrip = {
         trip_title: `Trip to ${booking.destination}`,
         destination: booking.destination,
-        duration: 3,
+        duration: booking.trip_data?.duration || 3,
         budget: 'Budget',
         summary: 'Detailed itinerary plan not saved. Booking details are below.',
-        hotel_suggestions: booking.tickets.filter(t => t.item_type === 'hotel').map(t => ({
-          name: t.name,
-          rating: 'N/A',
-          price_per_night: 'Booked',
-          description: t.details || 'Your booked hotel stay'
-        })),
+        itinerary: itinerary,
         transport_options: booking.tickets.filter(t => t.item_type === 'transport').map(t => ({
-          mode: t.name.split('-')[0].strip || 'Transport',
+          mode: t.name.split('-')[0]?.trim() || 'Transport',
           route: t.details || 'Booked Route',
           estimated_price: 'Booked',
           booking_tip: 'Tickets confirmed.'
